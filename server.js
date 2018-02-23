@@ -13,32 +13,60 @@ const server = express()
   .use(express.static('public'))
   .listen(PORT, '0.0.0.0', 'localhost', () => console.log(`Listening on ${ PORT }`));
 
+
+// Generating user color
+function getRandomColor() {
+  var letters = '0123456789ABCDEF';
+  var color = '#';
+  for (var i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
+
+
+
 // Create the WebSockets server
 const wss = new SocketServer({ server });
 
-// Set up a callback that will run when a client connects to the server
-// When a client connects they are assigned a socket, represented by
-// the ws parameter in the callback.
+
 wss.on('connection', (ws) => {
   console.log('Client connected');
   console.log(wss.clients.size);
-  const numberOfUsers = {
+  console.log(getRandomColor());
+  const userColor = {
+    type: "serverChangeColor",
+    color: getRandomColor(),
+  }
+  const numberOfUsersJoin = {
         users: wss.clients.size,
-        type: "serverMessage"
+        type: "userJoined",
       };
 // Sending number of users
   wss.clients.forEach(function each(client) {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(numberOfUsers));
+      client.send(JSON.stringify(numberOfUsersJoin));
     }
   });
 
+  // Sending user color
+  wss.clients.forEach(function each(client) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(userColor));
+    }
+  });
+
+
 // Receiving client msg
   ws.on('message', function incoming(message) {
-    console.log(message);
     const msg = JSON.parse(message)
     msg.id = uuidv1();
-    console.log(`User ${msg.username} said ${msg.content}`);
+    if(msg.type === "Message") {
+      console.log(`User ${msg.username} said ${msg.content}`);
+    } else if (msg.type === "Notification"){
+      console.log(`${msg.username} changed their name to ${msg.content}`)
+    }
 
 // Sending msg back to all clients
     wss.clients.forEach(function each(client) {
@@ -48,18 +76,18 @@ wss.on('connection', (ws) => {
       });
   });
 
-  // Set up a callback for when a client closes the socket. This usually means they closed their browser.
   ws.on('close', () => {
     console.log('Client disconnected');
     console.log(wss.clients.size);
-    const numberOfUsers = {
+    const numberOfUsersLeave = {
       users: wss.clients.size,
-      type: "serverMessage"
+      type: "userLeft",
     };
+    // console.log(numberOfUsers);
     // Sending number of users
     wss.clients.forEach(function each(client) {
       if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify(numberOfUsers));
+        client.send(JSON.stringify(numberOfUsersLeave));
       }
     });
   });
