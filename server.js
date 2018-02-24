@@ -14,7 +14,7 @@ const server = express()
   .listen(PORT, '0.0.0.0', 'localhost', () => console.log(`Listening on ${ PORT }`));
 
 
-// Generating user color
+// Generating random user color
 function getRandomColor() {
   var letters = '0123456789ABCDEF';
   var color = '#';
@@ -24,17 +24,12 @@ function getRandomColor() {
   return color;
 }
 
-
-
-
 // Create the WebSockets server
 const wss = new SocketServer({ server });
 
 
 wss.on('connection', (ws) => {
   console.log('Client connected');
-  console.log(wss.clients.size);
-  console.log(getRandomColor());
   const userColor = {
     type: "serverChangeColor",
     color: getRandomColor(),
@@ -42,6 +37,7 @@ wss.on('connection', (ws) => {
   const numberOfUsersJoin = {
         users: wss.clients.size,
         type: "userJoined",
+        id: uuidv1()
       };
 // Sending number of users
   wss.clients.forEach(function each(client) {
@@ -50,13 +46,12 @@ wss.on('connection', (ws) => {
     }
   });
 
-  // Sending user color
-  wss.clients.forEach(function each(client) {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(userColor));
-    }
-  });
-
+  // WORK IN PROGRESS: USER NAME COLOR
+  // wss.clients.forEach(function each(client) {
+  //   if (client.readyState === WebSocket.OPEN) {
+  //     client.send(JSON.stringify(userColor));
+  //   }
+  // });
 
 // Receiving client msg
   ws.on('message', function incoming(message) {
@@ -78,13 +73,12 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     console.log('Client disconnected');
-    console.log(wss.clients.size);
     const numberOfUsersLeave = {
       users: wss.clients.size,
       type: "userLeft",
+      id: uuidv1()
     };
-    // console.log(numberOfUsers);
-    // Sending number of users
+    // Sending number of users when user leaves
     wss.clients.forEach(function each(client) {
       if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify(numberOfUsersLeave));
